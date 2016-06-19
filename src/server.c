@@ -4,10 +4,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <error.h>
+#include <signal.h>
 
 int main()
 {
-    int fd = 0, len = 0, ret = 0;
+    int fd = 0, buff_len = 0, count = 0, bytes_written = 0;
 
     struct stat fileStat;
 
@@ -18,7 +20,14 @@ int main()
 
     char msg[] = "Hello client!\n";
 
-    fd = open("tmp_file", O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+    char * buff = NULL;
+
+    // Create a message buffer
+    buff_len = strlen(msg) + 256;  // Buffer size should be sufficient for test/demo purposes.
+
+
+    //Set up the writing side of the pipe.
+    fd = open("tmp_file", O_WRONLY);
 
     printf("fd num: %d\n", fd);
 
@@ -27,13 +36,43 @@ int main()
         return -1;
     }
 
+    // Ignore signals raised on error. Instead handle them directly.
+    signal(SIGPIPE, SIG_IGN);
+
     while (1) {
 
+        buff = malloc(sizeof(char) * buff_len);
+
+        if (!buff)
+            return -1;
+
+        memset(buff, 0, buff_len);
+        snprintf(buff, buff_len, "%s:%d", msg, count);
+
         printf("Writing data...\n");
-        ret = write(fd, msg, strlen(msg));
-        printf("Bytes written: %d\n",ret);
+
+        while (bytes_written != strlen(buff)) {
+
+            bytes_written = write(fd, buff, strlen(buff));
+
+                if (bytes_written < 0) {
+                    perror("write()");
+
+                    // You could exit here or close and reopen as required.
+                    printf("EPIPE! Read side of pipe closed?\n");
+                    sleep(5);  //Just to slow down the debug in this case.
+                } else {
+                    printf("Num of bytes written: %d\n",bytes_written);
+                }
+
+            sleep(10);
+        }
+
+        bytes_written = 0;
+        free(buff);
 
         sleep (10);
+        count++;
     }
 
     close(fd);

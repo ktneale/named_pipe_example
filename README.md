@@ -24,3 +24,4 @@ Then the client:
 
 These two processes should recover from disconnection events.
 
+Based on: https://brandonwamboldt.ca/how-linux-pipes-work-under-the-hood-1518/

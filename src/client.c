@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
 
 int main()
 {
@@ -13,7 +14,7 @@ int main()
     fd_set fdset;
     struct timeval timeout;
 
-    fd = open("tmp_file", O_RDONLY, S_IRUSR | S_IWUSR);
+    fd = open("tmp_file", O_RDONLY);
 
     printf("fd num: %d\n", fd);
 
@@ -41,9 +42,17 @@ int main()
             continue;
         }
 
-        if (read(fd,&c,1) == 1) {
+        ret = read(fd,&c,1);
+
+        if (ret) {
             printf("byte: %c, %x\n",c,c);
+        } else if (ret == 0){
+            printf("EOF! Write side of pipe closed?\n");
+            sleep(3);  // Just to slow down the debug
+        } else {
+            perror("read");
         }
+
     }
 
     close(fd);
